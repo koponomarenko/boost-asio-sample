@@ -26,9 +26,7 @@ void handler(const boost::system::error_code& ec,
     std::cout << "received msg: " << msg << std::endl;
 }
 
-void log(const std::string& s) {
-    std::cout << "log: " << s << std::endl;
-}
+void log(const std::string& s) { std::cout << "log: " << s << std::endl; }
 
 int main()
 try {
@@ -43,7 +41,6 @@ try {
     const int pending_requests_queue_size = 50;
     acceptor.listen(pending_requests_queue_size);
 
-    asio::io_context io_context2; // tmp
     auto socket = std::make_shared<asio::ip::tcp::socket>(io_context);
     log("wait for the client");
     acceptor.accept(*socket);
@@ -57,12 +54,9 @@ try {
     asio::async_read(*socket, asio::buffer(session->buf, 11),
                      std::bind(handler, std::placeholders::_1, std::placeholders::_2, session));
 
-    //    char buf2[100] = {};
-    //    socket.read_some(asio::buffer(buf2, 20));
-    //    std::cout << "received msg: " << buf2 << std::endl;
+    log("wait for async_read finish");
+    // handlers are (waited for and) called in call;
     io_context.run();
-    log("wait for async_read");
-    std::this_thread::sleep_for(std::chrono::seconds {10});
 }
 catch (std::exception& e) {
     std::cerr << "std::exception: " << e.what() << std::endl;

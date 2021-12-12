@@ -6,12 +6,15 @@
 
 using namespace boost;
 
+void log(const std::string& s) { std::cout << "log: " << s << std::endl; }
+
 struct Session {
     std::shared_ptr<asio::ip::tcp::socket> sock;
     std::string buf;
 };
 
 // this is invoked when all data is writen or an error occurred.
+// another possible name: write_handler()
 void callback(const boost::system::error_code& ec,
               std::size_t bytes_transferred,
               std::shared_ptr<Session> session)
@@ -21,6 +24,7 @@ void callback(const boost::system::error_code& ec,
                   << ". Message: " << ec.message() << std::endl;
         return;
     }
+    log("msg was sent");
 }
 
 int main()
@@ -40,8 +44,13 @@ try {
     session->sock = socket;
     session->buf = msg;
 
+    log("do async_read");
     asio::async_write(*socket, asio::buffer(session->buf),
                       std::bind(callback, std::placeholders::_1, std::placeholders::_2, session));
+
+    log("wait for async_write finish");
+    // handlers are (waited for and) called in call;
+    io_context.run();
 }
 catch (std::exception& e) {
     std::cerr << "std::exception: " << e.what() << std::endl;
