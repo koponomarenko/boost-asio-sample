@@ -47,14 +47,13 @@ void async_read_msg_header_handler(const boost::system::error_code& ec,
     uint16_t msg_size{};
     memcpy(&msg_size, session->buffer.data(), msg_header_size);
     endian::big_to_native_inplace(msg_size);
+
     std::cout << "session->buffer.size(): " << session->buffer.size() << std::endl;
     std::cout << "session->buffer[0]: " << static_cast<uint16_t>(session->buffer[0]) << std::endl;
     std::cout << "session->buffer[1]: " << static_cast<uint16_t>(session->buffer[1]) << std::endl;
-
     std::cout << "received msg size: " << msg_size << std::endl;
 
     session->buffer.resize(msg_header_size + msg_size);
-    std::cout << "session->buffer.size(): " << session->buffer.size() << std::endl;
     asio::async_read(
         *session->socket, asio::buffer(session->buffer),
         std::bind(async_read_handler, std::placeholders::_1, std::placeholders::_2, session));

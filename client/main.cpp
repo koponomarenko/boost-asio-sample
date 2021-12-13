@@ -42,9 +42,9 @@ std::vector<char> transform_to_msg(const std::string& s)
     std::cout << "msg_size: " << msg_size << std::endl;
     endian::native_to_big_inplace(msg_size);
 
-    char* tmp = reinterpret_cast<char*>(&msg_size);
-    std::cout << "tmp[0]: " << static_cast<uint16_t>(tmp[0]) << std::endl;
-    std::cout << "tmp[1]: " << static_cast<uint16_t>(tmp[1]) << std::endl;
+    char* msg_size_buf = reinterpret_cast<char*>(&msg_size);
+    std::cout << "msg_size_buf[0]: " << static_cast<uint16_t>(msg_size_buf[0]) << std::endl;
+    std::cout << "msg_size_buf[1]: " << static_cast<uint16_t>(msg_size_buf[1]) << std::endl;
 
     std::copy(reinterpret_cast<char*>(&msg_size),
               reinterpret_cast<char*>(&msg_size + sizeof(msg_size)), std::back_inserter(msg));
