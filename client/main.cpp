@@ -4,11 +4,11 @@
 #include <string>
 
 #include <boost/asio.hpp>
+#include <boost/endian/conversion.hpp>
 
 using namespace boost;
 
-// hardcode fixed msg size for simplicity
-constexpr int msg_size = 100;
+constexpr int msg_header_size = 2;
 
 void log(const std::string& s)
 {
@@ -36,9 +36,24 @@ void async_write_handler(const boost::system::error_code& ec,
 std::vector<char> transform_to_msg(const std::string& s)
 {
     std::vector<char> msg;
-    msg.resize(msg_size, '\0');
-    int len = (s.size() < msg_size) ? s.size() : msg_size;
-    std::copy(s.begin(), s.begin() + len, msg.begin());
+
+    // insert msg header (msg size info)
+    uint16_t msg_size{static_cast<uint16_t>(s.size())};
+    std::cout << "msg_size: " << msg_size << std::endl;
+    endian::native_to_big_inplace(msg_size);
+
+    char* tmp = reinterpret_cast<char*>(&msg_size);
+    std::cout << "tmp[0]: " << static_cast<uint16_t>(tmp[0]) << std::endl;
+    std::cout << "tmp[1]: " << static_cast<uint16_t>(tmp[1]) << std::endl;
+
+    std::copy(reinterpret_cast<char*>(&msg_size),
+              reinterpret_cast<char*>(&msg_size + sizeof(msg_size)), std::back_inserter(msg));
+
+    std::copy(s.begin(), s.end(), std::back_inserter(msg));
+
+    std::cout << "msg[0]: " << static_cast<uint16_t>(msg[0]) << std::endl;
+    std::cout << "msg[1]: " << static_cast<uint16_t>(msg[1]) << std::endl;
+
     return msg;
 }
 
@@ -61,7 +76,7 @@ try {
 
     log("do async_write");
     asio::async_write(
-        *socket, asio::buffer(session->buffer, msg_size),
+        *socket, asio::buffer(session->buffer),
         std::bind(async_write_handler, std::placeholders::_1, std::placeholders::_2, session));
 
     log("wait for async_write finish");

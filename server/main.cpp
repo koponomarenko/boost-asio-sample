@@ -2,11 +2,11 @@
 #include <vector>
 
 #include <boost/asio.hpp>
+#include <boost/endian/conversion.hpp>
 
 using namespace boost;
 
-// hardcode fixed msg size for simplicity
-constexpr int msg_size = 100;
+constexpr int msg_header_size = 2;
 
 void log(const std::string& s)
 {
@@ -29,8 +29,47 @@ void async_read_handler(const boost::system::error_code& ec,
         return;
     }
 
+//    uint16_t msg_size{};
+//    memcpy(&msg_size, session->buffer.data(), msg_header_size);
+//    endian::big_to_native_inplace(msg_size);
+//    std::cout << "session->buffer.size(): " << session->buffer.size() << std::endl;
+//    std::cout << "session->buffer[0]: " << static_cast<uint16_t>(session->buffer[0]) << std::endl;
+//    std::cout << "session->buffer[1]: " << static_cast<uint16_t>(session->buffer[1]) << std::endl;
+//
+//    std::cout << "received msg size: " << msg_size << std::endl;
+
     std::string msg{session->buffer.begin(), session->buffer.end()};
     std::cout << "received msg: " << msg << std::endl;
+}
+
+// this is invoked when all data is writen or an error occurs
+void async_read_msg_header_handler(const boost::system::error_code& ec,
+                                   std::size_t bytes_transferred,
+                                   std::shared_ptr<Session> session)
+{
+    if (ec.value() != 0) {
+        std::cerr << "ERROR: in async_read_handler. Error code " << ec.value()
+                  << ". Message: " << ec.message() << std::endl;
+        return;
+    }
+
+    uint16_t msg_size{};
+    memcpy(&msg_size, session->buffer.data(), msg_header_size);
+    endian::big_to_native_inplace(msg_size);
+    std::cout << "session->buffer.size(): " << session->buffer.size() << std::endl;
+    std::cout << "session->buffer[0]: " << static_cast<uint16_t>(session->buffer[0]) << std::endl;
+    std::cout << "session->buffer[1]: " << static_cast<uint16_t>(session->buffer[1]) << std::endl;
+
+    std::cout << "received msg size: " << msg_size << std::endl;
+
+    session->buffer.resize(msg_size);
+    std::cout << "session->buffer.size(): " << session->buffer.size() << std::endl;
+    asio::async_read(
+        *session->socket, asio::buffer(session->buffer),
+        std::bind(async_read_handler, std::placeholders::_1, std::placeholders::_2, session));
+
+    //    std::string msg{session->buffer.begin(), session->buffer.end()};
+    //    std::cout << "received msg: " << msg << std::endl;
 }
 
 int main()
@@ -54,12 +93,12 @@ try {
     log("client connected");
     auto session{std::make_shared<Session>()};
     session->socket = socket;
-    session->buffer.resize(msg_size, 0);
+    session->buffer.resize(2, 0);
 
     log("do async_read");
-    asio::async_read(
-        *socket, asio::buffer(session->buffer, msg_size),
-        std::bind(async_read_handler, std::placeholders::_1, std::placeholders::_2, session));
+    asio::async_read(*socket, asio::buffer(session->buffer, 2),
+                     std::bind(async_read_msg_header_handler, std::placeholders::_1,
+                               std::placeholders::_2, session));
 
     log("wait for async_read finish");
     // all handlers are (waited for and) called in this call
