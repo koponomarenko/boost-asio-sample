@@ -29,16 +29,7 @@ void async_read_handler(const boost::system::error_code& ec,
         return;
     }
 
-//    uint16_t msg_size{};
-//    memcpy(&msg_size, session->buffer.data(), msg_header_size);
-//    endian::big_to_native_inplace(msg_size);
-//    std::cout << "session->buffer.size(): " << session->buffer.size() << std::endl;
-//    std::cout << "session->buffer[0]: " << static_cast<uint16_t>(session->buffer[0]) << std::endl;
-//    std::cout << "session->buffer[1]: " << static_cast<uint16_t>(session->buffer[1]) << std::endl;
-//
-//    std::cout << "received msg size: " << msg_size << std::endl;
-
-    std::string msg{session->buffer.begin(), session->buffer.end()};
+    std::string msg{session->buffer.begin() + msg_header_size, session->buffer.end()};
     std::cout << "received msg: " << msg << std::endl;
 }
 
@@ -62,14 +53,11 @@ void async_read_msg_header_handler(const boost::system::error_code& ec,
 
     std::cout << "received msg size: " << msg_size << std::endl;
 
-    session->buffer.resize(msg_size);
+    session->buffer.resize(msg_header_size + msg_size);
     std::cout << "session->buffer.size(): " << session->buffer.size() << std::endl;
     asio::async_read(
         *session->socket, asio::buffer(session->buffer),
         std::bind(async_read_handler, std::placeholders::_1, std::placeholders::_2, session));
-
-    //    std::string msg{session->buffer.begin(), session->buffer.end()};
-    //    std::cout << "received msg: " << msg << std::endl;
 }
 
 int main()
@@ -93,10 +81,10 @@ try {
     log("client connected");
     auto session{std::make_shared<Session>()};
     session->socket = socket;
-    session->buffer.resize(2, 0);
+    session->buffer.resize(msg_header_size);
 
     log("do async_read");
-    asio::async_read(*socket, asio::buffer(session->buffer, 2),
+    asio::async_read(*socket, asio::buffer(session->buffer, msg_header_size),
                      std::bind(async_read_msg_header_handler, std::placeholders::_1,
                                std::placeholders::_2, session));
 
