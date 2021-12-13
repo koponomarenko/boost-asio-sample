@@ -15,7 +15,7 @@ void log(const std::string& s)
 
 struct Session {
     std::shared_ptr<asio::ip::tcp::socket> socket;
-    std::vector<char> buffer;
+    std::vector<uint8_t> buffer;
 };
 
 // this is invoked when all data is writen or an error occurs

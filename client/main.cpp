@@ -17,7 +17,7 @@ void log(const std::string& s)
 
 struct Session {
     std::shared_ptr<asio::ip::tcp::socket> socket;
-    std::vector<char> buffer;
+    std::vector<uint8_t> buffer;
 };
 
 // this is invoked when all data is writen or an error occurs
@@ -33,21 +33,21 @@ void async_write_handler(const boost::system::error_code& ec,
     log("msg was sent");
 }
 
-std::vector<char> transform_to_msg(const std::string& s)
+auto transform_to_msg(const std::string& s) -> std::vector<uint8_t>
 {
-    std::vector<char> msg;
+    std::vector<uint8_t> msg;
 
     // insert msg header (msg size info)
     uint16_t msg_size{static_cast<uint16_t>(s.size())};
     std::cout << "msg_size: " << msg_size << std::endl;
     endian::native_to_big_inplace(msg_size);
 
-    char* msg_size_buf = reinterpret_cast<char*>(&msg_size);
+    uint8_t* msg_size_buf = reinterpret_cast<uint8_t*>(&msg_size);
     std::cout << "msg_size_buf[0]: " << static_cast<uint16_t>(msg_size_buf[0]) << std::endl;
     std::cout << "msg_size_buf[1]: " << static_cast<uint16_t>(msg_size_buf[1]) << std::endl;
 
-    std::copy(reinterpret_cast<char*>(&msg_size),
-              reinterpret_cast<char*>(&msg_size + sizeof(msg_size)), std::back_inserter(msg));
+    std::copy(reinterpret_cast<uint8_t*>(&msg_size),
+              reinterpret_cast<uint8_t*>(&msg_size + sizeof(msg_size)), std::back_inserter(msg));
 
     std::copy(s.begin(), s.end(), std::back_inserter(msg));
 
